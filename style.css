@@ -284,6 +284,9 @@ canvas{max-height:280px;}
   position:fixed; inset:0; background:rgba(6,10,20,0.75); backdrop-filter:blur(4px);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:1000;
 }
+.loading-overlay[hidden]{
+  display: none !important;
+}
 .loader{width:48px; height:48px; border:3px solid var(--line); border-top-color:var(--cyan); border-radius:50%; animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
