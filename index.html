@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Dataset Binary Encoder | EC2201 Digital Systems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Ambient circuit background -->
+<div class="circuit-bg" aria-hidden="true"></div>
+<div class="bit-rain" id="bitRain" aria-hidden="true"></div>
+
+<!-- Toast container -->
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<!-- NAV -->
+<header class="topnav">
+  <div class="brand">
+    <span class="brand-mark">10</span>
+    <div class="brand-text">
+      <strong>AI Dataset Binary Encoder</strong>
+      <small>EC2201 · Digital Systems</small>
+    </div>
+  </div>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <nav id="mainNav">
+    <a href="#home" data-page="home" class="nav-link active">Home</a>
+    <a href="#dataset" data-page="dataset" class="nav-link">Dataset</a>
+    <a href="#encoder" data-page="encoder" class="nav-link">Encoder</a>
+    <a href="#visualization" data-page="visualization" class="nav-link">Visualization</a>
+    <a href="#validation" data-page="validation" class="nav-link">Validation</a>
+    <a href="#testcases" data-page="testcases" class="nav-link">Test Cases</a>
+    <a href="#about" data-page="about" class="nav-link">About</a>
+  </nav>
+</header>
+
+<main id="app">
+
+  <!-- ============ HOME ============ -->
+  <section class="page active" id="page-home">
+    <div class="hero">
+      <div class="hero-copy">
+        <p class="kicker">EC2201 Digital Systems · Semester Project</p>
+        <h1>Every dataset value has a binary shadow.<br>This is where you meet it.</h1>
+        <p class="hero-sub">Upload a real dataset or use the built-in sample, choose an encoding scheme, and watch each value get converted into structured binary — one division step at a time.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" id="btnStartEncoding">Start Encoding</button>
+          <button class="btn btn-ghost" id="btnUploadDataset">Upload Dataset</button>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="encoder-chip">
+          <div class="chip-row" id="heroBitRow"></div>
+          <div class="chip-label">LIVE BIT PREVIEW</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card glass">
+        <span class="stat-label">Total Records</span>
+        <span class="stat-value" id="statRecords">0</span>
+      </div>
+      <div class="stat-card glass">
+        <span class="stat-label">Encoded Fields</span>
+        <span class="stat-value" id="statFields">0</span>
+      </div>
+      <div class="stat-card glass">
+        <span class="stat-label">Binary Values Generated</span>
+        <span class="stat-value" id="statBinaryValues">0</span>
+      </div>
+      <div class="stat-card glass">
+        <span class="stat-label">Validation Status</span>
+        <span class="stat-value" id="statValidation">—</span>
+      </div>
+    </div>
+
+    <div class="home-explain glass">
+      <h2>What this project does</h2>
+      <p>AI training pipelines and digital logic circuits don't speak the same language — one works in floats and strings, the other works in bits. The <strong>AI Dataset Binary Encoder</strong> sits between them: it takes raw dataset columns (numeric or categorical), applies a chosen encoding scheme, and produces a clean binary dataset ready for digital-system processing, along with validation on every row.</p>
+    </div>
+  </section>
+
+  <!-- ============ DATASET ============ -->
+  <section class="page" id="page-dataset">
+    <h1 class="page-title">Dataset</h1>
+    <p class="page-sub">Bring in data three ways: drop a CSV, type values by hand, or load the sample set.</p>
+
+    <div class="grid-2">
+      <div class="panel glass" id="dropZone">
+        <input type="file" id="fileInput" accept=".csv" hidden>
+        <div class="drop-icon">⇩</div>
+        <p class="drop-title">Drag &amp; drop a CSV file here</p>
+        <p class="drop-sub">or click to browse · .csv only</p>
+        <button class="btn btn-secondary" id="btnBrowse">Choose File</button>
+      </div>
+
+      <div class="panel glass">
+        <h3>Quick options</h3>
+        <button class="btn btn-primary full" id="btnSampleData">Load Sample Dataset</button>
+        <button class="btn btn-ghost full" id="btnManualEntry">Enter Data Manually</button>
+        <button class="btn btn-danger-ghost full" id="btnClearDataset">Clear Dataset</button>
+      </div>
+    </div>
+
+    <div class="panel glass" id="manualEntryPanel" hidden>
+      <h3>Manual entry</h3>
+      <p class="hint">Comma-separated header row first, then one row per line — same shape as a CSV.</p>
+      <textarea id="manualInput" rows="6" placeholder="Age,Gender,Score
+21,Male,85
+34,Female,42"></textarea>
+      <button class="btn btn-primary" id="btnParseManual">Parse &amp; Load</button>
+    </div>
+
+    <div class="panel glass" id="datasetSummary" hidden>
+      <div class="summary-row">
+        <div><span class="summary-label">File</span><strong id="sumFileName">—</strong></div>
+        <div><span class="summary-label">Rows</span><strong id="sumRows">0</strong></div>
+        <div><span class="summary-label">Columns</span><strong id="sumCols">0</strong></div>
+      </div>
+      <div class="table-scroll">
+        <table id="previewTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ENCODER (config + conversion + logic viz + table + export) ============ -->
+  <section class="page" id="page-encoder">
+    <h1 class="page-title">Encoder Workspace</h1>
+    <p class="page-sub">Configure fields, convert values, and trace every conversion through the digital pipeline.</p>
+
+    <!-- Config -->
+    <div class="panel glass">
+      <h3>1 · Encoding configuration</h3>
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Fields to encode</label>
+          <div id="fieldCheckboxes" class="checkbox-list">
+            <p class="hint">Load a dataset first to see fields here.</p>
+          </div>
+        </div>
+        <div class="config-field">
+          <label for="encodingScheme">Encoding scheme</label>
+          <select id="encodingScheme">
+            <option value="binary">Binary Encoding (raw 0/1 pass-through)</option>
+            <option value="numeric" selected>Numeric to Binary</option>
+            <option value="categorical">Categorical Encoding (label → binary)</option>
+            <option value="onehot">One-Hot Encoding</option>
+          </select>
+          <p class="scheme-explain" id="schemeExplain"></p>
+        </div>
+        <div class="config-field">
+          <label for="bitLength">Bit length</label>
+          <select id="bitLength">
+            <option value="auto" selected>Auto (fit smallest)</option>
+            <option value="4">4 bits</option>
+            <option value="8">8 bits</option>
+            <option value="16">16 bits</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label for="missingHandling">Missing value handling</label>
+          <select id="missingHandling">
+            <option value="zero" selected>Fill with 0</option>
+            <option value="skip">Skip row</option>
+            <option value="flag">Flag as invalid</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label for="encodingOrder">Encoding order</label>
+          <select id="encodingOrder">
+            <option value="original" selected>Original row order</option>
+            <option value="asc">Sort ascending</option>
+            <option value="desc">Sort descending</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnRunEncoding">Run Encoding</button>
+    </div>
+
+    <!-- Live single-value encoder -->
+    <div class="panel glass">
+      <h3>2 · Binary encoder — try a single value</h3>
+      <div class="encoder-try">
+        <input type="text" id="tryValue" placeholder="e.g. 21 or Male">
+        <button class="btn btn-secondary" id="btnTryEncode">Convert</button>
+      </div>
+      <div id="tryResult" class="try-result"></div>
+      <div id="tryStepsBox" class="steps-box" hidden>
+        <h4>Step-by-step division</h4>
+        <ol id="tryStepsList"></ol>
+        <p class="steps-final" id="tryStepsFinal"></p>
+      </div>
+    </div>
+
+    <!-- Digital logic visualization -->
+    <div class="panel glass">
+      <h3>3 · Digital logic visualization</h3>
+      <div class="pipeline" id="pipeline">
+        <div class="pipe-stage" data-stage="0"><span>AI Dataset</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage" data-stage="1"><span>Preprocessing</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage" data-stage="2"><span>Encoding Scheme</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage" data-stage="3"><span>Binary Encoder</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage" data-stage="4"><span>Validation</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage" data-stage="5"><span>Binary Dataset</span></div>
+        <div class="pipe-bit" id="pipeBit">1</div>
+      </div>
+      <div class="led-row" id="ledRow"><p class="hint">Run the encoder to light up bits here.</p></div>
+    </div>
+
+    <!-- Data table -->
+    <div class="panel glass">
+      <h3>4 · Encoded data table</h3>
+      <div class="table-controls">
+        <input type="text" id="tableSearch" placeholder="Search value or field...">
+        <select id="tableFilter">
+          <option value="all">All statuses</option>
+          <option value="Valid">Valid only</option>
+          <option value="Warning">Warnings only</option>
+          <option value="Invalid">Invalid only</option>
+        </select>
+        <select id="tableSort">
+          <option value="none">No sorting</option>
+          <option value="field">Sort by field</option>
+          <option value="original">Sort by original value</option>
+          <option value="status">Sort by status</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table id="resultsTable">
+          <thead><tr><th>Field</th><th>Original Value</th><th>Processed Value</th><th>Binary Output</th><th>Status</th></tr></thead>
+          <tbody id="resultsBody"><tr><td colspan="5" class="empty-row">No encoded data yet — run the encoder above.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Export -->
+    <div class="panel glass">
+      <h3>5 · Export</h3>
+      <div class="export-actions">
+        <button class="btn btn-primary" id="btnExportCsv">Download CSV</button>
+        <button class="btn btn-secondary" id="btnExportJson">Download JSON</button>
+        <button class="btn btn-danger-ghost" id="btnResetDataset">Reset Dataset</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VISUALIZATION ============ -->
+  <section class="page" id="page-visualization">
+    <h1 class="page-title">Visualization</h1>
+    <p class="page-sub">Charts update automatically after every encoding run.</p>
+    <div class="grid-2">
+      <div class="panel glass"><h3>Encoded records by field</h3><canvas id="chartByField"></canvas></div>
+      <div class="panel glass"><h3>Valid vs invalid records</h3><canvas id="chartValidity"></canvas></div>
+      <div class="panel glass"><h3>Binary bit distribution (0s vs 1s)</h3><canvas id="chartBitDist"></canvas></div>
+      <div class="panel glass"><h3>Records processed over run history</h3><canvas id="chartHistory"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ============ VALIDATION ============ -->
+  <section class="page" id="page-validation">
+    <h1 class="page-title">Validation</h1>
+    <p class="page-sub">Every encoded row is checked automatically for these conditions.</p>
+    <div class="stat-grid three">
+      <div class="stat-card glass valid"><span class="stat-label">✓ Valid records</span><span class="stat-value" id="valValid">0</span></div>
+      <div class="stat-card glass warn"><span class="stat-label">⚠ Warnings</span><span class="stat-value" id="valWarn">0</span></div>
+      <div class="stat-card glass danger"><span class="stat-label">✕ Errors</span><span class="stat-value" id="valError">0</span></div>
+    </div>
+    <div class="panel glass">
+      <h3>Validation checklist</h3>
+      <ul class="check-list">
+        <li><strong>Missing values</strong> — flagged or filled per your configuration.</li>
+        <li><strong>Invalid input format</strong> — non-numeric text where a number was expected.</li>
+        <li><strong>Incorrect binary length</strong> — value needs more bits than the selected bit length allows.</li>
+        <li><strong>Duplicate encoding</strong> — two different categories mapped to the same binary code.</li>
+        <li><strong>Negative numbers</strong> — unsigned binary can't represent them directly.</li>
+      </ul>
+    </div>
+    <div class="panel glass">
+      <h3>Issue log</h3>
+      <div class="table-scroll">
+        <table id="issueTable"><thead><tr><th>Field</th><th>Value</th><th>Issue</th><th>Severity</th></tr></thead>
+        <tbody id="issueBody"><tr><td colspan="4" class="empty-row">No issues yet — run the encoder to validate.</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TEST CASES ============ -->
+  <section class="page" id="page-testcases">
+    <h1 class="page-title">Test Cases</h1>
+    <p class="page-sub">Fixed regression suite: 10 normal conversions and 5 edge/fault cases, run live in your browser.</p>
+    <button class="btn btn-primary" id="btnRunTests">Run All Test Cases</button>
+    <div class="panel glass">
+      <h3>Results</h3>
+      <div class="table-scroll">
+        <table id="testTable">
+          <thead><tr><th>#</th><th>Input</th><th>Expected Output</th><th>Actual Output</th><th>Status</th></tr></thead>
+          <tbody id="testBody"><tr><td colspan="5" class="empty-row">Click "Run All Test Cases" to execute the suite.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section class="page" id="page-about">
+    <h1 class="page-title">About this project</h1>
+    <div class="grid-2">
+      <div class="panel glass">
+        <h3>Problem</h3>
+        <p>AI datasets mix numeric and categorical values in formats digital systems can't process directly. Before a digital circuit or logic-level system can operate on data, that data needs a consistent binary representation — and someone has to define exactly how each value type maps to bits.</p>
+      </div>
+      <div class="panel glass">
+        <h3>Solution</h3>
+        <p>The AI Dataset Binary Encoder takes any CSV dataset, lets you pick an encoding scheme per field, and produces a validated binary dataset — with every conversion step shown, not hidden behind a black box.</p>
+      </div>
+    </div>
+    <div class="panel glass">
+      <h3>Benefits</h3>
+      <ul class="check-list">
+        <li>Easy preprocessing — no spreadsheet macros or external scripts needed.</li>
+        <li>Standardized binary representation across numeric and categorical fields.</li>
+        <li>Explicit missing-value handling instead of silent data loss.</li>
+        <li>Built-in validation catches bad encodings before export.</li>
+        <li>One-click export to CSV or JSON for downstream digital-system tools.</li>
+      </ul>
+    </div>
+    <div class="panel glass">
+      <h3>Course context</h3>
+      <p>Built for <strong>EC2201 — Digital Systems</strong>. The project applies number-system conversion (decimal → binary), encoding theory (label and one-hot encoding), and basic digital-logic concepts (bits, gates, encoder blocks) to a practical AI-data-preprocessing scenario.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>AI Dataset Binary Encoder | EC2201 Digital Systems Project</p>
+</footer>
+
+<div class="loading-overlay" id="loadingOverlay" hidden>
+  <div class="loader"></div>
+  <p id="loadingText">Processing…</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

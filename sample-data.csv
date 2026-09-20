@@ -1,0 +1,11 @@
+Age,Gender,Score,Category
+21,Male,85,A
+34,Female,42,B
+19,Female,90,A
+45,Male,,C
+10,Male,15,B
+31,Female,78,A
+25,Other,60,C
+15,Male,,B
+40,Female,99,A
+22,Male,55,C
